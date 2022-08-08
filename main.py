@@ -3,7 +3,7 @@ import gaussianbeam
 
 
 def main():
-    gaussianbeam.analyze('focuspoint.jpg', 2)
+    beams = gaussianbeam.analyze('focuspoint.jpg', 2)
     pixelSize = 7.4 #micometers
 
 if __name__ == '__main__':

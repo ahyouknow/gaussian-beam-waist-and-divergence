@@ -12,8 +12,8 @@ class GaussianBeam:
         self.linspace = np.linspace(0, self.flatX.shape[0], self.flatX.shape[0])
         self.xOpt, _ = optimize.curve_fit(gaussianBeamEquation, self.linspace, self.flatX)
         self.yOpt, _ = optimize.curve_fit(gaussianBeamEquation, self.linspace, self.flatY)
-        self.waistX  = self.xOpt[1]
-        self.waistY  = self.yOpt[1]
+        self.waistX  = inverseGBeamEqn(*self.xOpt)
+        self.waistY  = inverseGBeamEqn(*self.yOpt)
         self.waist  = (self.waistY + self.waistX) / 2
 
     def showImage(self):
@@ -52,9 +52,15 @@ def analyze(filename, numOfBeams):
     beams[0].showGraphs()
     print(beams[1].waist)
     beams[1].showGraphs()
+    print(beams[1].yOpt)
+    print(beams[0].xOpt)
+    return beams
 
 # Formula for intensity of a gaussian beam
 # https://en.wikipedia.org/wiki/Gaussian_beam#Mathematical_form
 # w(z) becomes w0 at the focus
 def gaussianBeamEquation(x, I0, waist0, b, c):
     return I0 * np.exp(-2 * (((x+b)) / waist0)**2 ) + c
+
+def inverseGBeamEqn(I0, waist0, b, c):
+    return np.sqrt(abs(b-waist0/2 * np.log(abs(I0*(np.e**-2 - c)))))
