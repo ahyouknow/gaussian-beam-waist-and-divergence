@@ -6,15 +6,18 @@ from matplotlib import pyplot as plt
 class GaussianBeam:
     def __init__(self, array):
         self.array = array
+        x, y = array.shape
         self.img = Image.fromarray(self.array)
-        self.flatX = np.sum(self.array, axis=0)
-        self.flatY = np.sum(self.array, axis=1)
-        self.linspace = np.linspace(0, self.flatX.shape[0], self.flatX.shape[0])
-        self.xOpt, _ = optimize.curve_fit(gaussianBeamEquation, self.linspace, self.flatX)
-        self.yOpt, _ = optimize.curve_fit(gaussianBeamEquation, self.linspace, self.flatY)
-        self.waistX  = inverseGBeamEqn(*self.xOpt)
-        self.waistY  = inverseGBeamEqn(*self.yOpt)
-        self.waist  = (self.waistY + self.waistX) / 2
+        self.flatX = np.floor(1/y * np.sum(self.array, axis=0))
+        self.flatY = np.floor(1/x * np.sum(self.array, axis=1))
+        self.linspace = np.linspace(-x/2, x/2, len(self.flatX))
+        self.fitlinspace = np.linspace(-x/2, x/2, 100)
+        popt = [ 24.44155195, 3.65223563, 0 ] 
+        self.xOpt, _ = optimize.curve_fit(gaussianBeamEquation, self.linspace, self.flatX, p0=popt)
+        self.yOpt, _ = optimize.curve_fit(gaussianBeamEquation, self.linspace, self.flatY, p0=popt)
+        self.waistX = self.xOpt[1] ##inverseGBeamEqn(*self.xOpt)
+        self.waistY = self.yOpt[1] ##inverseGBeamEqn(*self.yOpt)
+        self.waists = np.array(self.waistX, self.waistY)
 
     def showImage(self):
         self.img.show()
@@ -22,16 +25,22 @@ class GaussianBeam:
     def showGraphs(self):
         fig, ax = plt.subplots(2)
         ax[0].plot(self.linspace, self.flatX, 'o')
-        ax[0].plot(self.linspace, gaussianBeamEquation(self.linspace, *self.xOpt))
+        ax[0].plot(self.fitlinspace, gaussianBeamEquation(self.fitlinspace, *self.xOpt))
         ax[1].plot(self.linspace, self.flatY, 'o')
-        ax[1].plot(self.linspace, gaussianBeamEquation(self.linspace, *self.yOpt))
+        ax[1].plot(self.fitlinspace, gaussianBeamEquation(self.fitlinspace, *self.yOpt))
         plt.show()
+
+    def calcDivergence(self, wvl):
+        self.divergence = 2*wvl / (np.pi*self.waist)
+        return self.divergence
 
 
 def analyze(filename, numOfBeams):
     picarray = np.array(Image.open(filename).convert('L'))
-    test = (-picarray).flatten().argsort()
-    indices = np.unravel_index(test, picarray.shape)
+    backgroundNoise = picarray[0][0]
+    picarray = picarray - backgroundNoise * np.ones(picarray.shape)
+    sortedArray = (-picarray).flatten().argsort()
+    indices = np.unravel_index(sortedArray, picarray.shape)
     maxIndex = np.array((indices[0][0],indices[1][0]))
     centerindices = np.array([maxIndex])
     n = 1
@@ -45,22 +54,10 @@ def analyze(filename, numOfBeams):
         beamArray = picarray[x - 10:x + 10, y - 10:y + 10]
         beam = GaussianBeam(beamArray)
         beams.append(beam)
-    print(beams[0].waist)
-    print(beams[0].waistX)
-    print(beams[0].waistY)
-    print('\n')
-    beams[0].showGraphs()
-    print(beams[1].waist)
-    beams[1].showGraphs()
-    print(beams[1].yOpt)
-    print(beams[0].xOpt)
     return beams
 
 # Formula for intensity of a gaussian beam
 # https://en.wikipedia.org/wiki/Gaussian_beam#Mathematical_form
 # w(z) becomes w0 at the focus
-def gaussianBeamEquation(x, I0, waist0, b, c):
-    return I0 * np.exp(-2 * (((x+b)) / waist0)**2 ) + c
-
-def inverseGBeamEqn(I0, waist0, b, c):
-    return np.sqrt(abs(b-waist0/2 * np.log(abs(I0*(np.e**-2 - c)))))
+def gaussianBeamEquation(x, I0, waist0, b):
+    return I0 * np.exp(-2 * (((x+b)) / waist0)**2 )
