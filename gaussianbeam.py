@@ -15,9 +15,7 @@ class GaussianBeam:
         popt = [ 24.44155195, 3.65223563, 0 ] 
         self.xOpt, _ = optimize.curve_fit(gaussianBeamEquation, self.linspace, self.flatX, p0=popt)
         self.yOpt, _ = optimize.curve_fit(gaussianBeamEquation, self.linspace, self.flatY, p0=popt)
-        self.waistX = self.xOpt[1] ##inverseGBeamEqn(*self.xOpt)
-        self.waistY = self.yOpt[1] ##inverseGBeamEqn(*self.yOpt)
-        self.waists = np.array(self.waistX, self.waistY)
+        self.waists = np.array([self.xOpt[1], self.yOpt[1]])
 
     def showImage(self):
         self.img.show()
@@ -29,10 +27,6 @@ class GaussianBeam:
         ax[1].plot(self.linspace, self.flatY, 'o')
         ax[1].plot(self.fitlinspace, gaussianBeamEquation(self.fitlinspace, *self.yOpt))
         plt.show()
-
-    def calcDivergence(self, wvl):
-        self.divergence = 2*wvl / (np.pi*self.waist)
-        return self.divergence
 
 
 def analyze(filename, numOfBeams):
